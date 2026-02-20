@@ -1,2 +1,2 @@
-# AROMA AI
+# AROMI AI
 health care
