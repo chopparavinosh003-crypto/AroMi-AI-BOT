@@ -33,4 +33,31 @@ app.post('/api/chat', (req, res) => {
   res.json({ reply });
 });
 
+app.post('/api/groq-chat', async (req, res) => {
+  try {
+    const { messages } = req.body;
+    const apiKey = "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";
+
+    const requestBody = {
+      model: "llama-3.1-8b-instant",
+      messages: messages,
+      temperature: 0.7,
+      max_tokens: 400
+    };
+
+    const axios = require('axios');
+    const response = await axios.post("https://api.groq.com/openai/v1/chat/completions", requestBody, {
+      headers: {
+        "Authorization": "Bearer " + apiKey,
+        "Content-Type": "application/json"
+      }
+    });
+
+    res.json(response.data);
+  } catch (error) {
+    console.error("LLM API Error:", error.response?.data || error.message);
+    res.status(500).json({ error: error.response?.data?.error?.message || "Internal Server Error" });
+  }
+});
+
 app.listen(5000, () => console.log("Backend running at http://localhost:5000"));
