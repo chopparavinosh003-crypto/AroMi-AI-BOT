@@ -35,8 +35,8 @@
       overflow-x: hidden;
     }
 
-    /* Login Modal Overlay */
-    #loginOverlay {
+    /* Profile Modal Overlay */
+    #profileModal {
       position: fixed;
       top: 0;
       left: 0;
@@ -625,14 +625,62 @@
 <body>
 
   <!-- Login Overlay -->
-  <div id="loginOverlay">
+  <div id="loginOverlay" style="display: flex; justify-content: center; margin-top: 25px;">
     <div class="login-box">
       <h2><i class="fas fa-leaf" style="color:var(--primary);"></i> AroMi AI</h2>
       <p style="margin-bottom: 30px; font-size: 17px; color: var(--text-muted); font-weight:500;">Please select your
         profile to continue</p>
-      <button class="role-btn" onclick="login('child')"><i class="fas fa-child"></i> I am a Child</button>
-      <button class="role-btn" onclick="login('adult')" style="background: #1e40af;"><i class="fas fa-user-circle"></i>
+      <button class="role-btn" onclick="selectRole('child')"><i class="fas fa-child"></i> I am a Child</button>
+      <button class="role-btn" onclick="selectRole('adult')" style="background: #1e40af;"><i
+          class="fas fa-user-circle"></i>
         I am an Adult</button>
+    </div>
+  </div>
+
+  <!-- Profile Modal -->
+  <div id="profileModal" style="display:none; opacity:1;">
+    <div class="login-box" style="max-width: 500px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 20px;">
+        <h2 style="margin:0;"><i class="fas fa-leaf" style="color:var(--primary);"></i> Setup Profile</h2>
+        <button onclick="toggleProfileModal()"
+          style="background:none; border:none; font-size:24px; cursor:pointer; color:var(--text-muted);"><i
+            class="fas fa-times"></i></button>
+      </div>
+
+      <div class="form-group">
+        <label>Name</label>
+        <input type="text" id="prof-name" placeholder="Enter your name" required />
+      </div>
+      <div class="form-group" style="display: flex; gap: 15px;">
+        <div style="flex:1;">
+          <label>Age</label>
+          <input type="number" id="prof-age" placeholder="Years" required />
+        </div>
+        <div style="flex:1;">
+          <label>Weight (kg)</label>
+          <input type="number" id="prof-weight" placeholder="kg" required />
+        </div>
+        <div style="flex:1;">
+          <label>Height (cm)</label>
+          <input type="number" id="prof-height" placeholder="cm" required />
+        </div>
+      </div>
+      <div class="form-group" style="text-align: center;">
+        <label style="text-align: left;">Profile Picture</label>
+        <div
+          style="margin: 15px auto; width: 140px; height: 140px; border-radius: 50%; border: 3px solid var(--primary); overflow: hidden; background: #e5e7eb; display: flex; align-items: center; justify-content: center;">
+          <img id="prof-pic-preview" src="" style="width: 100%; height: 100%; object-fit: cover; display: none;" />
+          <i id="prof-pic-icon" class="fas fa-camera" style="font-size: 50px; color: #9ca3af;"></i>
+        </div>
+        <input type="file" id="prof-pic" accept="image/*"
+          style="border: none; padding: 0; box-shadow: none; font-size: 14px;" onchange="previewImage(event)" />
+      </div>
+
+      <div style="display: flex; justify-content: center; margin-top: 25px;">
+        <button class="role-btn" onclick="submitProfile()"
+          style="background: var(--primary); width: auto; padding: 16px 30px;"><i class="fas fa-arrow-right"></i>
+          Continue to Dashboard</button>
+      </div>
     </div>
   </div>
 
@@ -651,6 +699,7 @@
           style="display:none;" />
         <button class="report-btn" id="sendReportBtn" onclick="sendReportToParent()"><i class="fas fa-paper-plane"></i>
           Send to Parent</button>
+        <button class="settings-btn" onclick="toggleProfileModal()"><i class="fas fa-user"></i> Profile</button>
         <button class="settings-btn" onclick="toggleSettings()"><i class="fas fa-cog"></i> Limits</button>
       </div>
     </nav>
@@ -803,7 +852,9 @@
 
   <script>
     // --- State Management ---
-    let currentUserRole = null;
+    let pendingRole = null;
+    let currentUserRole = 'adult';
+    let userProfile = { name: 'Guest', age: 25, weight: 70, height: 175, pic: null };
 
     let limits = {
       steps: 10000,
@@ -817,31 +868,154 @@
       steps: 0, calories: 0, sleep: 0, temp: 98.6, heart: 75
     };
 
-    // --- Initialization ---
-    function login(role) {
-      currentUserRole = role;
+    window.onload = () => {
+      // Keep loginOverlay visible, hide other modals
+      document.getElementById('profileModal').style.display = 'none';
+    };
+
+    function selectRole(role) {
+      pendingRole = role;
       document.getElementById('loginOverlay').style.opacity = '0';
       setTimeout(() => {
         document.getElementById('loginOverlay').style.display = 'none';
+        document.getElementById('profileModal').style.display = 'flex';
+      }, 500);
+    }
+
+    function previewImage(event) {
+      const input = event.target;
+      if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = function (e) {
+          document.getElementById('prof-pic-preview').src = e.target.result;
+          document.getElementById('prof-pic-preview').style.display = 'block';
+          document.getElementById('prof-pic-icon').style.display = 'none';
+          userProfile.pic = e.target.result; // Temporarily save to profile object
+        }
+        reader.readAsDataURL(input.files[0]);
+      }
+    }
+
+    function toggleProfileModal() {
+      const modal = document.getElementById('profileModal');
+      if (modal.style.display === 'flex') {
+        modal.style.display = 'none';
+      } else {
+        modal.style.display = 'flex';
+        // preload current profile data
+        document.getElementById('prof-name').value = userProfile.name !== 'Guest' ? userProfile.name : '';
+        document.getElementById('prof-age').value = userProfile.age || '';
+        document.getElementById('prof-weight').value = userProfile.weight || '';
+        document.getElementById('prof-height').value = userProfile.height || '';
+        if (userProfile.pic) {
+          document.getElementById('prof-pic-preview').src = userProfile.pic;
+          document.getElementById('prof-pic-preview').style.display = 'block';
+          document.getElementById('prof-pic-icon').style.display = 'none';
+        } else {
+          document.getElementById('prof-pic-preview').style.display = 'none';
+          document.getElementById('prof-pic-icon').style.display = 'block';
+        }
+      }
+    }
+
+    // --- Initialization ---
+    function submitProfile() {
+      const name = document.getElementById('prof-name').value.trim();
+      const age = parseInt(document.getElementById('prof-age').value);
+      const weight = parseFloat(document.getElementById('prof-weight').value);
+      const height = parseFloat(document.getElementById('prof-height').value);
+
+      if (!name || isNaN(age) || isNaN(weight) || isNaN(height)) {
+        alert("Please fill in all profile details correctly.");
+        return;
+      }
+
+      userProfile = { name, age, weight, height, pic: userProfile.pic };
+
+      // Picture is already read in `previewImage` and stored in `userProfile.pic`.
+      // If we directly submit without changing the picture again, just proceed.
+      applyProfile(pendingRole);
+    }
+
+    function applyProfile(role) {
+      // Calculate dynamic limits based on Profile
+      // 1. BMI calculation
+      let heightInMeters = userProfile.height / 100;
+      let bmi = userProfile.weight / (heightInMeters * heightInMeters);
+
+      // 2. Steps limit
+      limits.steps = 10000;
+      if (userProfile.age < 12) limits.steps = 12000;
+      else if (userProfile.age >= 12 && userProfile.age < 18) limits.steps = 11000;
+      else if (userProfile.age > 50) limits.steps = 8000;
+      if (bmi > 25 && userProfile.age < 50) limits.steps += 1000;
+
+      // 3. Calories (BMR * 1.2 for light activity)
+      let bmr = 10 * userProfile.weight + 6.25 * userProfile.height - 5 * userProfile.age + 5;
+      limits.calories = Math.max(1200, Math.round(bmr * 1.2));
+
+      // 4. Sleep
+      if (userProfile.age < 13) limits.sleep = 10;
+      else if (userProfile.age < 18) limits.sleep = 9;
+      else if (userProfile.age > 60) limits.sleep = 7.5;
+      else limits.sleep = 8;
+
+      // 5. Heart Rate Limit
+      let maxHr = 220 - userProfile.age;
+      limits.heart = Math.round(maxHr * 0.75);
+
+      // 6. Temp is static
+      limits.temp = 99.5;
+
+      // Update Modal inputs for Settings
+      document.getElementById('in-steps').value = limits.steps;
+      document.getElementById('in-calories').value = limits.calories;
+      document.getElementById('in-sleep').value = limits.sleep;
+      document.getElementById('in-heart').value = limits.heart;
+      document.getElementById('in-temp').value = limits.temp;
+
+      // Update Cards limits directly here, then login() calls updateUI()
+      document.getElementById('lim-steps').innerText = limits.steps;
+      document.getElementById('lim-calories').innerText = limits.calories;
+      document.getElementById('lim-sleep').innerText = limits.sleep;
+      document.getElementById('lim-heart').innerText = limits.heart;
+      document.getElementById('lim-temp').innerText = limits.temp;
+
+      // We explicitly log in with the parameter passed from submitProfile
+      login(role);
+    }
+    function login(role) {
+      currentUserRole = role;
+      document.getElementById('profileModal').style.opacity = '0';
+      setTimeout(() => {
+        document.getElementById('profileModal').style.display = 'none';
         document.getElementById('app').style.display = 'block';
+        document.getElementById('profileModal').style.opacity = '1'; // reset for later opening manually
       }, 500);
 
       const badge = document.getElementById('userBadge');
+      let imgHtml = userProfile.pic ? `<img src="${userProfile.pic}" style="width:24px; height:24px; border-radius:50%; object-fit:cover; vertical-align:middle; margin-right:4px;" />` : `<i class="fas ${role === 'child' ? 'fa-child' : 'fa-user-circle'}"></i>`;
+
       if (role === 'child') {
-        badge.innerHTML = '<i class="fas fa-child"></i> Role: Child Profile';
+        badge.innerHTML = `${imgHtml} Role: Child Profile - ${userProfile.name} (${userProfile.age}y)`;
         badge.style.background = "#fef08a";
         badge.style.color = "#854d0e";
         document.getElementById('sendReportBtn').style.display = 'inline-flex';
         document.getElementById('autoParentEmail').style.display = 'inline-block';
       } else {
-        badge.innerHTML = '<i class="fas fa-user-circle"></i> Role: Adult Profile';
+        badge.innerHTML = `${imgHtml} Role: Adult Profile - ${userProfile.name} (${userProfile.age}y)`;
         badge.style.background = "#dbeafe";
         badge.style.color = "#1e40af";
         document.getElementById('sendReportBtn').style.display = 'none';
         document.getElementById('autoParentEmail').style.display = 'inline-block';
       }
 
-      initApp();
+      // Force UI updates based on the new limits
+      if (currentStats.steps === 0) {
+        initApp(); // start simulation if not started
+      } else {
+        updateUI(); // refresh UI immediately with potentially new limits
+      }
     }
 
     function toggleReportModal() {
@@ -932,33 +1106,37 @@
     // --- Dynamic Simulation Update ---
     function initApp() {
       // initial random base
-      currentStats.steps = Math.floor(Math.random() * 2000) + 1000;
-      currentStats.calories = Math.floor(Math.random() * 400) + 200;
-      currentStats.sleep = parseFloat((Math.random() * 3 + 5).toFixed(1)); // 5 to 8 hours
-      currentStats.temp = parseFloat((Math.random() * 2.5 + 97.2).toFixed(1)); // 97.2 to 99.7
-      currentStats.heart = Math.floor(Math.random() * 30) + 65; // 65 to 95 bpm
+      // if already initialized (stats > 0), don't reset
+      if (currentStats.steps === 0) {
+        currentStats.steps = Math.floor(Math.random() * 2000) + 1000;
+        currentStats.calories = Math.floor(Math.random() * 400) + 200;
+        currentStats.sleep = parseFloat((Math.random() * 3 + 5).toFixed(1)); // 5 to 8 hours
+        currentStats.temp = parseFloat((Math.random() * 2.5 + 97.2).toFixed(1)); // 97.2 to 99.7
+        currentStats.heart = Math.floor(Math.random() * 30) + 65; // 65 to 95 bpm
+
+        initCharts();
+
+        // simulate walking/living over time
+        setInterval(() => {
+          // Increment trackers organically
+          currentStats.steps += Math.floor(Math.random() * 150);
+          currentStats.calories += Math.floor(Math.random() * 25);
+
+          // chance to slightly spike temperature
+          if (Math.random() > 0.85) {
+            currentStats.temp = parseFloat((currentStats.temp + (Math.random() * 0.5 - 0.1)).toFixed(1));
+          }
+
+          // fluctuate heart rate
+          const hrChange = Math.floor(Math.random() * 15) - 5; // -5 to +10 change
+          currentStats.heart = Math.max(60, Math.min(180, currentStats.heart + hrChange));
+
+          updateUI();
+          updateCharts();
+        }, 8000); // UI updates softly every 8s
+      }
 
       updateUI();
-      initCharts();
-
-      // simulate walking/living over time
-      setInterval(() => {
-        // Increment trackers organically
-        currentStats.steps += Math.floor(Math.random() * 150);
-        currentStats.calories += Math.floor(Math.random() * 25);
-
-        // chance to slightly spike temperature
-        if (Math.random() > 0.85) {
-          currentStats.temp = parseFloat((currentStats.temp + (Math.random() * 0.5 - 0.1)).toFixed(1));
-        }
-
-        // fluctuate heart rate
-        const hrChange = Math.floor(Math.random() * 15) - 5; // -5 to +10 change
-        currentStats.heart = Math.max(60, Math.min(180, currentStats.heart + hrChange));
-
-        updateUI();
-        updateCharts();
-      }, 8000); // UI updates softly every 8s
     }
 
     function updateUI() {
@@ -1206,12 +1384,12 @@
     }
 
     async function processLLMApi(message, typingId) {
-      const apiKey = "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";
       const typingEl = document.getElementById(typingId);
 
       // Construct system prompt with current user state
       const systemPrompt = `You are AroMi, an empathetic and highly intelligent AI Health & Wellness coach.
 You are currently talking to a user with the role of: ${currentUserRole}.
+Their profile: Name: ${userProfile.name}, Age: ${userProfile.age}, Weight: ${userProfile.weight}kg, Height: ${userProfile.height}cm.
 Here are their LIVE real-time health metrics, against their custom daily limits:
 - Body Temperature: ${currentStats.temp.toFixed(1)}°F (Normal limit is ${limits.temp})
 - Heart Rate: ${currentStats.heart} bpm (Limit is ${limits.heart})
@@ -1221,29 +1399,23 @@ Here are their LIVE real-time health metrics, against their custom daily limits:
 
 Use this data to answer their questions. If they ask about their health condition, actively analyze the data above and warn them if temp or heart rate is above limits. Keep your responses concise, friendly, and formatted nicely. Do NOT use markdown code blocks.`;
 
-      const requestBody = {
-        model: "llama-3.1-8b-instant", // Groq fast model
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: message }
-        ],
-        temperature: 0.7,
-        max_tokens: 400
-      };
-
       try {
-        const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+        const response = await fetch("http://localhost:5000/api/groq-chat", {
           method: "POST",
           headers: {
-            "Authorization": "Bearer " + apiKey,
             "Content-Type": "application/json"
           },
-          body: JSON.stringify(requestBody)
+          body: JSON.stringify({
+            messages: [
+              { role: "system", content: systemPrompt },
+              { role: "user", content: message }
+            ]
+          })
         });
 
         if (!response.ok) {
           const errData = await response.json().catch(() => ({}));
-          throw new Error(`API Error: ${response.status} - ${errData.error?.message || response.statusText}`);
+          throw new Error(`API Error: ${response.status} - ${errData.error || response.statusText}`);
         }
 
         const data = await response.json();
@@ -1254,7 +1426,7 @@ Use this data to answer their questions. If they ask about their health conditio
 
       } catch (error) {
         console.error("LLM API Error:", error);
-        let errorMsg = error.message.includes('401') ? "Invalid API Key. Please verify your Groq API Key." : "Failed to connect to Groq AI. Check your network connection or API quota.";
+        let errorMsg = error.message;
         typingEl.innerHTML = `<b>⚠️ Connection Error:</b> ${errorMsg}`;
         typingEl.style.color = "var(--danger)";
         typingEl.style.background = "#fee2e2";
