@@ -36,7 +36,7 @@ app.post('/api/chat', (req, res) => {
 app.post('/api/groq-chat', async (req, res) => {
   try {
     const { messages } = req.body;
-    const apiKey = "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";
+    const apiKey = "PASTE_YOUR_API_KEY_HERE";
 
     const requestBody = {
       model: "llama-3.1-8b-instant",
@@ -61,3 +61,4 @@ app.post('/api/groq-chat', async (req, res) => {
 });
 
 app.listen(5000, () => console.log("Backend running at http://localhost:5000"));
+
